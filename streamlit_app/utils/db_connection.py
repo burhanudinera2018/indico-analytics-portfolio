@@ -1,144 +1,95 @@
-import streamlit as st
-import pandas as pd
-from sqlalchemy import text
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+"""
+Database connection for INDICO Analytics
+"""
 
-from database.init_db import get_engine
+import os
+import streamlit as st
+from sqlalchemy import create_engine, text
+import pandas as pd
 
 @st.cache_resource
-def init_connection():
-    return get_engine()
+def get_engine():
+    """Get database engine from environment"""
+    
+    # Debug: Tampilkan environment variables yang tersedia
+    st.write("🔍 Checking environment...")
+    
+    # Cek SUPABASE_URL dari secrets
+    supabase_url = os.environ.get("SUPABASE_URL")
+    
+    if supabase_url:
+        st.success("✅ SUPABASE_URL found in secrets!")
+        # Tampilkan host saja (tanpa password)
+        if "@" in supabase_url:
+            host_part = supabase_url.split("@")[1].split("/")[0]
+            st.info(f"   Connecting to: {host_part}")
+        
+        try:
+            engine = create_engine(supabase_url)
+            # Test connection
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            st.success("✅ Database connection successful!")
+            return engine
+        except Exception as e:
+            st.error(f"❌ Failed to connect: {e}")
+            st.code(f"Error type: {type(e).__name__}")
+            return None
+    else:
+        st.error("❌ SUPABASE_URL not found in secrets!")
+        st.info("Please add SUPABASE_URL in Streamlit Cloud Settings → Secrets")
+        return None
 
 def run_query(query):
-    engine = init_connection()
-    with engine.connect() as conn:
-        return pd.read_sql_query(text(query), conn)
+    """Execute query and return DataFrame"""
+    engine = get_engine()
+    if engine is None:
+        return pd.DataFrame()
+    
+    try:
+        with engine.connect() as conn:
+            return pd.read_sql_query(text(query), conn)
+    except Exception as e:
+        st.error(f"Query error: {e}")
+        return pd.DataFrame()
+
+# ============================================
+# SIMPLE QUERIES (pasti jalan)
+# ============================================
 
 def get_retention_analysis():
-    """Retention analysis - simplified version"""
+    """Simple retention query"""
     query = """
-    WITH user_cohort AS (
-        SELECT 
-            user_id,
-            business_unit,
-            DATE_TRUNC('month', registration_date) AS cohort_month
-        FROM users
-    ),
-    user_activity AS (
-        SELECT 
-            ua.user_id,
-            u.business_unit,
-            u.cohort_month,
-            DATE_TRUNC('month', ua.activity_date) AS activity_month
-        FROM user_activity_logs ua
-        JOIN user_cohort u ON ua.user_id = u.user_id
-        WHERE ua.activity_date >= u.cohort_month
-    )
     SELECT 
-        cohort_month::DATE as cohort_month,
+        DATE_TRUNC('month', activity_date) AS month,
         business_unit,
-        activity_month,
         COUNT(DISTINCT user_id) AS active_users
-    FROM user_activity
-    GROUP BY cohort_month, business_unit, activity_month
-    ORDER BY cohort_month, business_unit, activity_month
-    """
-    try:
-        return run_query(query)
-    except Exception as e:
-        print(f"Error in retention query: {e}")
-        # Return empty dataframe with expected columns
-        return pd.DataFrame(columns=['cohort_month', 'business_unit', 'activity_month', 'active_users'])
-    query = """
-    WITH user_cohort AS (
-        SELECT 
-            user_id,
-            business_unit,
-            DATE_TRUNC('month', registration_date) AS cohort_month
-        FROM users
-    ),
-    user_activity_cohort AS (
-        SELECT 
-            ua.user_id,
-            u.business_unit,
-            u.cohort_month,
-            DATE_TRUNC('month', ua.activity_date) AS activity_month,
-            EXTRACT(MONTH FROM AGE(ua.activity_date, u.registration_date)) AS month_number
-        FROM user_activity_logs ua
-        JOIN user_cohort u ON ua.user_id = u.user_id
-        WHERE ua.activity_date >= u.registration_date
-    )
-    SELECT 
-        cohort_month,
-        business_unit,
-        month_number,
-        COUNT(DISTINCT user_id) AS active_users
-    FROM user_activity_cohort
-    GROUP BY cohort_month, business_unit, month_number
-    ORDER BY cohort_month, business_unit, month_number
+    FROM user_activity_logs
+    GROUP BY DATE_TRUNC('month', activity_date), business_unit
+    ORDER BY month, business_unit
     """
     return run_query(query)
 
 def get_cross_engagement():
+    """Cross engagement query"""
     query = """
-    WITH multi_product_users AS (
-        SELECT 
-            user_id,
-            COUNT(DISTINCT business_unit) AS total_units_used,
-            STRING_AGG(DISTINCT business_unit, ', ' ORDER BY business_unit) AS units_combination
-        FROM user_activity_logs
-        GROUP BY user_id
-        HAVING COUNT(DISTINCT business_unit) > 1
-    )
     SELECT 
-        units_combination,
-        COUNT(user_id) AS total_users,
-        ROUND(100.0 * COUNT(user_id) / (SELECT COUNT(DISTINCT user_id) FROM user_activity_logs), 2) AS pct_of_total_users
-    FROM multi_product_users
-    GROUP BY units_combination
+        business_unit,
+        COUNT(DISTINCT user_id) AS total_users
+    FROM user_activity_logs
+    GROUP BY business_unit
     ORDER BY total_users DESC
     """
     return run_query(query)
 
-def get_ltv_analysis():
-    query = """
-    WITH user_revenue AS (
-        SELECT 
-            t.user_id,
-            u.business_unit,
-            t.subscription_type,
-            SUM(t.amount) AS total_revenue,
-            COUNT(DISTINCT DATE_TRUNC('month', t.transaction_date)) AS active_months
-        FROM transactions t
-        JOIN users u ON t.user_id = u.user_id
-        GROUP BY t.user_id, u.business_unit, t.subscription_type
-    )
-    SELECT 
-        business_unit,
-        subscription_type,
-        COUNT(user_id) AS total_customers,
-        ROUND(AVG(total_revenue), 2) AS avg_ltv,
-        ROUND(AVG(total_revenue / NULLIF(active_months, 0)), 2) AS avg_monthly_revenue
-    FROM user_revenue
-    GROUP BY business_unit, subscription_type
-    ORDER BY business_unit, avg_ltv DESC
-    """
-    return run_query(query)
-
-def get_feature_usage():
-    query = """
-    SELECT 
-        business_unit,
-        feature_used,
-        COUNT(*) AS total_usage,
-        COUNT(DISTINCT user_id) AS unique_users,
-        ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (PARTITION BY business_unit), 2) AS usage_percentage,
-        SUM(transaction_amt) AS revenue_generated
-    FROM user_activity_logs
-    WHERE feature_used IS NOT NULL
-    GROUP BY business_unit, feature_used
-    ORDER BY business_unit, total_usage DESC
-    """
-    return run_query(query)
+def test_connection():
+    """Test database connection"""
+    engine = get_engine()
+    if engine is None:
+        return False
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return True
+    except:
+        return False

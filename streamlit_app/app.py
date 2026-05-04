@@ -1,8 +1,31 @@
+import traceback
+import sys
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from utils.db_connection import *
+import os
+
+# Import database functions
+from utils.db_connection import get_engine, run_query, test_connection
+
+# Test database connection FIRST
+st.title("🔌 Database Connection Test")
+
+if test_connection():
+    st.success("✅ Database connected successfully!")
+else:
+    st.error("❌ Database connection failed!")
+    st.stop()  # Stop here if no connection
+
+# Bungkus query dengan try-except
+try:
+    retention_data = get_retention_analysis()
+    st.dataframe(retention_data)  # Lihat apakah data kosong
+except Exception as e:
+    st.error(f"Error: {e}")
+    st.code(traceback.format_exc())
 
 # Page config
 st.set_page_config(
