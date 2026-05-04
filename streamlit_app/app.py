@@ -69,6 +69,10 @@ with st.sidebar:
     - Feature Usage Insights
     """)
 
+    st.markdown("---")
+    st.caption("© 2026 Burhanudin Badiuzaman")
+    st.caption("Data Analyst Portfolio")
+
 # ============================================
 # KPI CARDS
 # ============================================
@@ -297,3 +301,20 @@ st.markdown("---")
 st.markdown("""
 **📌 Methodology:** Data from Jan-Mar 2024 | SQL Analysis + Python Visualization | Built with Streamlit
 """)
+
+st.markdown(
+    """
+    <div style="text-align: center; padding: 20px 0 10px 0;">
+        <p>✨ <strong>Burhanudin Badiuzaman</strong> | Data Analyst Portfolio ✨</p>
+        <p style="font-size: 11px; color: gray;">
+            © 2024 All Rights Reserved | Built with ❤️ using Streamlit
+        </p>
+        <p style="font-size: 11px;">
+            <a href="https://github.com/burhanudinera2018" target="_blank">GitHub</a> • 
+            <a href="https://www.linkedin.com/in/burhanudin-badiuzaman4a9204161/" target="_blank">LinkedIn</a> • 
+            <a href="mailto:burhanudinera2018@gmail.com">Email</a>
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
