@@ -307,7 +307,7 @@ st.markdown(
     <div style="text-align: center; padding: 20px 0 10px 0;">
         <p>✨ <strong>Burhanudin Badiuzaman</strong> | Data Analyst Portfolio ✨</p>
         <p style="font-size: 11px; color: gray;">
-            © 2024 All Rights Reserved | Built with ❤️ using Streamlit
+            © 2026 All Rights Reserved | Built with ❤️ using Streamlit
         </p>
         <p style="font-size: 11px;">
             <a href="https://github.com/burhanudinera2018" target="_blank">GitHub</a> • 
