@@ -1,0 +1,118 @@
+# ============================================
+# PYTHON
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.egg-info/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ============================================
+# JUPYTER NOTEBOOK
+# ============================================
+.ipynb_checkpoints/
+*.ipynb
+*.ipynb_checkpoints
+.ipynb_checkpoints/*
+*.ipynb.json
+
+# ============================================
+# STREAMLIT
+# ============================================
+.streamlit/secrets.toml
+.streamlit/config.toml
+
+# ============================================
+# DATABASE & CREDENTIALS
+# ============================================
+*.db
+*.sqlite
+*.sqlite3
+.env
+.env.local
+.env.*.local
+secrets.toml
+credentials.json
+*.pem
+*.key
+
+# ============================================
+# IDE & EDITOR
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.desktop.ini
+Thumbs.db
+*.suo
+*.user
+*.sln.docstates
+
+# ============================================
+# DATA FILES (Important!)
+# ============================================
+# Jangan upload data mentah ke GitHub
+data/*.csv
+data/*.xlsx
+data/*.json
+data/*.parquet
+!data/.gitkeep
+
+# Tapi izinkan folder data tetap ada
+!data/
+data/.gitkeep
+
+# ============================================
+# LOGS & TEMP FILES
+# ============================================
+*.log
+*.tmp
+temp/
+tmp/
+logs/
+*.pid
+
+# ============================================
+# OS GENERATED FILES
+# ============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.bak
+
+# ============================================
+# PROJECT SPECIFIC
+# ============================================
+# Notebooks (sudah di atas)
+# CSV files (sudah di atas)
+# Local database exports
+backup/
+exports/
+*.dump
+*.sql
+
+# ============================================
+# DEPLOYMENT
+# ============================================
+*.pyc
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
