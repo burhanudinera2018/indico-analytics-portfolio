@@ -6,15 +6,15 @@ Data Analyst Portfolio Project
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import sys
 import os
 
 # Tambahkan root ke path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Import langsung dari db_connection
 from utils.db_connection import (
-    test_connection, 
+    test_connection,
     get_retention_analysis,
     get_cross_engagement,
     get_ltv_analysis,
