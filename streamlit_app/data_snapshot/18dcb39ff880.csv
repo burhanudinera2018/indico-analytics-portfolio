@@ -1,0 +1,12 @@
+business_unit,subscription_type,total_customers,avg_ltv,avg_monthly_revenue
+Fita,Paket Bulanan,110,172818.18181818182,172818.18181818182
+Fita,Sesi Konsultasi,114,168841.64222873902,168841.64222873902
+Fita,Paket Tahunan,53,160000.0,160000.0
+Fita,No Subscription,0,0.0,0.0
+Kuncie,Tahunan,145,227256.94444444444,227256.94444444444
+Kuncie,Bulanan,183,222859.21625544268,222859.21625544268
+Kuncie,No Subscription,0,0.0,0.0
+Majamojo,Item Game,163,116338.95131086142,116338.95131086142
+Majamojo,Bulanan,133,112325.17482517482,112325.17482517482
+Majamojo,Paket Event,69,109705.88235294117,109705.88235294117
+Majamojo,No Subscription,0,0.0,0.0

@@ -1,55 +1,87 @@
 """
 Database connection for INDICO Analytics
-Support both local and cloud (Supabase)
+Support local, cloud (Supabase), dan cadangan snapshot CSV.
+
+Alur run_query():
+1. Coba database (Supabase di Streamlit Cloud, atau PostgreSQL lokal).
+2. Jika gagal, baca hasil query yang sama dari folder data_snapshot/.
+3. Detail error hanya dicatat di log (Manage app), tidak ditampilkan ke pengunjung.
+
+Membuat/memperbarui snapshot (di laptop, sekali saja):
+    SIMPAN_SNAPSHOT=1 streamlit run streamlit_app/app.py
 """
 
+import hashlib
 import os
+import re
+from pathlib import Path
+
+import pandas as pd
 import streamlit as st
 from sqlalchemy import create_engine, text
-import pandas as pd
+
+SNAPSHOT_DIR = Path(__file__).resolve().parent.parent / "data_snapshot"
+SIMPAN_SNAPSHOT = os.environ.get("SIMPAN_SNAPSHOT") == "1"
+_status = {"pakai_snapshot": False}
+
+
+def _log(pesan: str) -> None:
+    """Catat ke log Streamlit (terlihat di Manage app), bukan ke layar pengunjung."""
+    print(f"[db_connection] {pesan}", flush=True)
+
 
 @st.cache_resource
+def _buat_engine():
+    """Engine hanya di-cache jika BERHASIL; kegagalan (exception) tidak di-cache,
+    sehingga aplikasi otomatis mencoba lagi tanpa perlu Reboot."""
+    url = os.environ.get("SUPABASE_URL") or "postgresql:///indico_db?host=localhost"
+    args = {"connect_timeout": 5} if url.startswith("postgresql") else {}
+    engine = create_engine(url, connect_args=args, pool_pre_ping=True)
+    with engine.connect() as conn:
+        conn.execute(text("SELECT 1"))
+    return engine
+
+
 def get_engine():
-    """Get database engine - cached for performance"""
-    
-    # Untuk Streamlit Cloud (Supabase)
-    supabase_url = os.environ.get("SUPABASE_URL")
-    if supabase_url:
-        try:
-            engine = create_engine(supabase_url)
-            # Test connection
-            with engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
-            return engine
-        except Exception as e:
-            st.error(f"❌ Cannot connect to Supabase: {e}")
-            return None
-    
-    # Untuk local development
+    """Get database engine - None jika database tidak bisa dihubungi."""
     try:
-        engine = create_engine('postgresql:///indico_db?host=localhost')
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        return engine
+        return _buat_engine()
     except Exception as e:
-        st.error(f"❌ Cannot connect to local database: {e}")
+        _log(f"Koneksi database gagal: {e}")
         return None
 
+
+def _file_snapshot(query: str) -> Path:
+    """Nama file CSV unik per query (spasi dinormalkan agar stabil)."""
+    kunci = re.sub(r"\s+", " ", query).strip()
+    return SNAPSHOT_DIR / f"{hashlib.sha1(kunci.encode()).hexdigest()[:12]}.csv"
+
+
 def run_query(query):
-    """Execute query and return DataFrame"""
+    """Execute query and return DataFrame (database, atau snapshot bila database gagal)."""
     engine = get_engine()
-    if engine is None:
-        return pd.DataFrame()
-    
-    try:
-        with engine.connect() as conn:
-            return pd.read_sql_query(text(query), conn)
-    except Exception as e:
-        st.error(f"Query error: {e}")
-        return pd.DataFrame()
+    if engine is not None:
+        try:
+            with engine.connect() as conn:
+                df = pd.read_sql_query(text(query), conn)
+            if SIMPAN_SNAPSHOT:
+                SNAPSHOT_DIR.mkdir(exist_ok=True)
+                df.to_csv(_file_snapshot(query), index=False)
+                _log(f"Snapshot disimpan: {_file_snapshot(query).name} ({len(df)} baris)")
+            return df
+        except Exception as e:
+            _log(f"Query gagal, beralih ke snapshot: {e}")
+
+    berkas = _file_snapshot(query)
+    if berkas.exists():
+        _status["pakai_snapshot"] = True
+        return pd.read_csv(berkas)
+    _log(f"Snapshot tidak ditemukan untuk query ini ({berkas.name})")
+    return pd.DataFrame()
+
 
 def test_connection():
-    """Test database connection"""
+    """True jika database terhubung."""
     engine = get_engine()
     if engine is None:
         return False
@@ -57,8 +89,19 @@ def test_connection():
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         return True
-    except:
+    except Exception as e:
+        _log(f"Tes koneksi gagal: {e}")
         return False
+
+
+def mode_data():
+    """'live' (database), 'snapshot' (cadangan CSV), atau 'none' (tidak ada data)."""
+    if test_connection():
+        return "live"
+    if SNAPSHOT_DIR.exists() and any(SNAPSHOT_DIR.glob("*.csv")):
+        return "snapshot"
+    return "none"
+
 
 # ============================================
 # MAIN ANALYSIS FUNCTIONS

@@ -15,6 +15,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Import langsung dari db_connection
 from utils.db_connection import (
     test_connection,
+    mode_data,
     get_retention_analysis,
     get_cross_engagement,
     get_ltv_analysis,
@@ -34,9 +35,12 @@ st.set_page_config(
 # ============================================
 # TEST DATABASE CONNECTION
 # ============================================
-if not test_connection():
-    st.error("❌ Database connection failed! Please check your configuration.")
+mode = mode_data()
+if mode == "none":
+    st.error("Data sementara tidak tersedia. Silakan coba beberapa saat lagi.")
     st.stop()
+elif mode == "snapshot":
+    st.info("ℹ️ Menampilkan data snapshot terakhir (database sedang tidak aktif).")
 
 # ============================================
 # TITLE & HEADER
