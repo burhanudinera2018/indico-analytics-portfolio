@@ -126,7 +126,8 @@ with tab1:
                     columns='business_unit', 
                     values='active_users',
                     fill_value=0
-                )
+                )   
+                pivot_retention.index = pd.to_datetime(pivot_retention.index).strftime("%Y-%m")
                 
                 # Tampilkan bar chart (pasti jalan)
                 st.subheader("Monthly Active Users by Business Unit")
